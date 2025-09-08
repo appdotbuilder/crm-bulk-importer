@@ -3,13 +3,13 @@
  * This provides users with the correct format and headers for their CSV files
  */
 export async function getCsvTemplate(): Promise<string> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to generate a CSV template with the expected headers
-  // Headers: nombre,apellido,email,telefono
-  // Should include a sample row to guide users
-  
+  // Define the CSV headers based on the contact schema
   const headers = 'nombre,apellido,email,telefono';
-  const sampleRow = 'Juan,Pérez,juan.perez@email.com,+34123456789';
   
-  return `${headers}\n${sampleRow}`;
+  // Provide a sample row to guide users on the expected format
+  const sampleRow = 'Juan,Pérez,juan.perez@email.com,+34123456789';
+  const sampleRow2 = 'María,García,maria.garcia@email.com,+34987654321';
+  
+  // Return the CSV template with headers and sample data
+  return `${headers}\n${sampleRow}\n${sampleRow2}`;
 }

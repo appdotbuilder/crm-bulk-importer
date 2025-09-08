@@ -1,24 +1,69 @@
+import { db } from '../db';
+import { importBatchesTable, importLogEntriesTable } from '../db/schema';
 import { type ImportProgress } from '../schema';
+import { eq, and, count, sql } from 'drizzle-orm';
 
 /**
  * Handler to get the current status of an import batch
  * Provides real-time progress information for the UI
  */
 export async function getImportStatus(batchId: number): Promise<ImportProgress | null> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to:
-  // 1. Query the import batch by ID
-  // 2. Calculate current progress statistics
-  // 3. Return progress information for UI updates
-  // 4. Handle cases where batch doesn't exist
-  
-  return {
-    batchId: batchId,
-    status: 'pending' as const,
-    totalRecords: 0,
-    processedRecords: 0,
-    successfulRecords: 0,
-    failedRecords: 0,
-    errors: []
-  } as ImportProgress;
+  try {
+    // Query the import batch by ID
+    const batchResults = await db.select()
+      .from(importBatchesTable)
+      .where(eq(importBatchesTable.id, batchId))
+      .execute();
+
+    if (batchResults.length === 0) {
+      return null;
+    }
+
+    const batch = batchResults[0];
+
+    // Count processed records (both success and error)
+    const processedCountResult = await db.select({
+      count: count()
+    })
+      .from(importLogEntriesTable)
+      .where(eq(importLogEntriesTable.import_batch_id, batchId))
+      .execute();
+
+    const processedRecords = processedCountResult[0]?.count || 0;
+
+    // Get error messages from failed log entries (limit to prevent overwhelming the UI)
+    const errorResults = await db.select({
+      error_message: importLogEntriesTable.error_message
+    })
+      .from(importLogEntriesTable)
+      .where(and(
+        eq(importLogEntriesTable.import_batch_id, batchId),
+        eq(importLogEntriesTable.status, 'error')
+      ))
+      .limit(10) // Limit to first 10 errors to keep response manageable
+      .execute();
+
+    // Extract non-null error messages
+    const errors = errorResults
+      .map(result => result.error_message)
+      .filter((msg): msg is string => msg !== null);
+
+    // Add batch-level error if exists
+    if (batch.error_log) {
+      errors.unshift(batch.error_log);
+    }
+
+    return {
+      batchId: batch.id,
+      status: batch.status,
+      totalRecords: batch.total_records,
+      processedRecords: processedRecords,
+      successfulRecords: batch.successful_records,
+      failedRecords: batch.failed_records,
+      errors: errors
+    };
+  } catch (error) {
+    console.error('Failed to get import status:', error);
+    throw error;
+  }
 }
