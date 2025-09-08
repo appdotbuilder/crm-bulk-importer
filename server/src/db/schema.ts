@@ -1,4 +1,4 @@
-import { serial, text, pgTable, timestamp, integer, pgEnum } from 'drizzle-orm/pg-core';
+import { serial, text, pgTable, timestamp, integer, pgEnum, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Enum for import batch status
@@ -12,10 +12,16 @@ export const contactsTable = pgTable('contacts', {
   id: serial('id').primaryKey(),
   nombre: text('nombre').notNull(),
   apellido: text('apellido').notNull(),
-  email: text('email'), // Nullable by default, unique index will be added
-  telefono: text('telefono'), // Nullable by default, unique index will be added
+  email: text('email'), // Nullable by default, index will be added for performance
+  telefono: text('telefono'), // Nullable by default, index will be added for performance
   created_at: timestamp('created_at').defaultNow().notNull(),
   updated_at: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    // Indexes for performance on duplicate checks
+    emailIndex: index('contacts_email_idx').on(table.email),
+    telefonoIndex: index('contacts_telefono_idx').on(table.telefono),
+  };
 });
 
 // Import batches table - tracks each CSV import session
